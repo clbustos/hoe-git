@@ -29,9 +29,9 @@ tagged release.
 The rdoc is automatically formatted into sections by using "annotated
 commit messages" by using a simple format for multi-line commit messages:
 
-    ! major change description.
-    + minor change description.
-    - bug fix description.
+    !      major change description.
+    + or * minor change description.
+    -      bug fix description.
     un-logged description (for minor stuff like re-formatting).
 
 === Generating the Manifest

@@ -1,0 +1,7 @@
+! Major 1|||Author 1|||author_1@test.com|||
++ Minor 1|||Author 1|||author_1@test.com|||
+* Minor 2|||Author 1|||author_1@test.com|||
+- Bug|||Author 1|||author_1@test.com|||
+Not assigned|||Author 1|||author_1@test.com|||
+!Major 2
+multiline|||Author 2|||author_2@test.com|||

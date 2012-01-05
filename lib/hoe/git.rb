@@ -1,3 +1,4 @@
+require 'hoe/git/changelog'
 class Hoe #:nodoc:
 
   # This module is a Hoe plugin. You can set its attributes in your
@@ -20,7 +21,7 @@ class Hoe #:nodoc:
   module Git
 
     # Duh.
-    VERSION = "1.4.1"
+    VERSION = "1.4.2"
 
     # What do you want at the front of your release tags?
     # [default: <tt>"v"</tt>]
@@ -32,9 +33,20 @@ class Hoe #:nodoc:
 
     attr_accessor :git_remotes
 
+    # What tags returns the subject and text of commit on git-log?
+    # Older git version uses <tt>%B</tt>
+    # [default: <tt>%s%b</tt>]
+    # 
+    attr_accessor :git_log_body
+    
+    # Should return author names on log commits?
+    # [default: <tt>false</tt>]
+    attr_accessor :git_log_author
     def initialize_git #:nodoc:
       self.git_release_tag_prefix = "v"
       self.git_remotes            = %w(origin)
+      self.git_log_body           = "%s%b"
+      self.git_log_author         = false
     end
 
     def define_git_tasks #:nodoc:
@@ -44,46 +56,12 @@ class Hoe #:nodoc:
       task "git:changelog" do
         tag   = ENV["FROM"] || git_tags.last
         range = [tag, "HEAD"].compact.join ".."
-        cmd   = "git log #{range} '--format=tformat:%B|||%aN|||%aE|||'"
-        now   = Time.new.strftime "%Y-%m-%d"
-
-        changes = `#{cmd}`.split(/\|\|\|/).each_slice(3).map do |msg, author, email|
-          msg.split(/\n/).reject { |s| s.empty? }
-        end
-
-        changes = changes.flatten
-
-        next if changes.empty?
-
-        $changes = Hash.new { |h,k| h[k] = [] }
-
-        codes = {
-          "!" => :major,
-          "+" => :minor,
-          "*" => :minor,
-          "-" => :bug,
-          "?" => :unknown,
-        }
-
-        codes_re = Regexp.escape codes.keys.join
-
-        changes.each do |change|
-          if change =~ /^\s*([#{codes_re}])\s*(.*)/ then
-            code, line = codes[$1], $2
-          else
-            code, line = codes["?"], change.chomp
-          end
-
-          $changes[code] << line
-        end
-
-        puts "=== #{ENV['VERSION'] || 'NEXT'} / #{now}"
-        puts
-        changelog_section :major
-        changelog_section :minor
-        changelog_section :bug
-        changelog_section :unknown
-        puts
+        version = ENV['VERSION'] || 'NEXT'
+        cmd   = "git log #{range} '--format=tformat:#{git_log_body}|||%aN|||%aE|||'"
+        log_text=`#{cmd}`
+        options={:io=>STDOUT, :log_author=>git_log_author, :version=>version}
+        cl=Hoe::Git::Changelog.new(log_text,options)
+        cl.process
       end
 
 
@@ -160,27 +138,6 @@ class Hoe #:nodoc:
       end
     end
 
-    def changelog_section code
-      name = {
-        :major   => "major enhancement",
-        :minor   => "minor enhancement",
-        :bug     => "bug fix",
-        :unknown => "unknown",
-      }[code]
-
-      changes = $changes[code]
-      count = changes.size
-      name += "s" if count > 1
-      name.sub!(/fixs/, 'fixes')
-
-      return if count < 1
-
-      puts "* #{count} #{name}:"
-      puts
-      changes.sort.each do |line|
-        puts "  * #{line}"
-      end
-      puts
-    end
+    
   end
 end
